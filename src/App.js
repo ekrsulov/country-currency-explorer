@@ -1,106 +1,102 @@
-import React from "react";
+import React, { useState } from "react";
 import { countries } from "countries-list";
-import { useI18n } from "@shopify/react-i18n";
-import { useCookies } from "react-cookie";
-import Select from "react-select";
 import symbol from "@brixtol/currency-symbols";
+import { PreciseMoney, Currency, IntlMoneyFormatter } from "@cashmoney/core";
+import Switch from "react-switch";
 
 import "./styles.css";
 import "country-flag-icons/3x2/flags.css";
 
 const cc = require("currency-codes");
-const langmap = require("langmap");
 
 const allCountries = Object.keys(countries)
   .filter((k) => k !== "AQ")
   .map((k) => ({ ...countries[k], iso: k }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
-const allLangs = Object.keys(langmap);
-
-const options = allLangs.map((k) => ({
-  value: k,
-  label:
-    "" + k + ": " + langmap[k]["englishName"] + " — " + langmap[k]["nativeName"]
-}));
-
 export default function App() {
-  const [i18n] = useI18n();
-  const [cookies, setCookie] = useCookies(["name"]);
+  const [showData, setShowData] = useState(false);
 
-  function onChange(e) {
-    setCookie("name", e.value, { path: "/" });
-    window.location.reload(false);
-  }
-
-  i18n.locale = cookies.name;
+  const handleChange = (checked) => {
+    setShowData(checked);
+  };
 
   return (
     <>
-      <Select onChange={onChange} options={options} />
       <center>
+        <h2>
+          Show Data <Switch onChange={handleChange} checked={showData} />
+        </h2>
         <table border="1" className="styled-table">
           <thead>
             <tr>
               <th>Flag</th>
               <th>Country</th>
               <th>Iso</th>
-              <th>Country data</th>
+              <th>Continent</th>
+              <th>Locale</th>
+              {showData && <th>Country data</th>}
               <th>Currency</th>
-              <th>Currency data</th>
-              <th>Symbol</th>
-              <th>Sample short</th>
-              <th>Sample explicit</th>
             </tr>
           </thead>
           <tbody>
-            {allCountries.map((k, n) => (
-              <tr>
-                <td>
-                  <div className={"flag:" + k.iso} />
-                </td>
-                <td>{k.name}</td>
-                <td>{k.iso}</td>
-                <td>
-                  <pre>{JSON.stringify(k, null, 2)}</pre>
-                </td>{" "}
-                <td>
-                  {k.currency.split(",").map((k) => (
-                    <div>{k}</div>
-                  ))}
-                </td>
-                <td>
-                  {k.currency.split(",").map((c) => (
-                    <pre>{JSON.stringify(cc.code(c), null, 2)}</pre>
-                  ))}
-                </td>{" "}
-                <td>
-                  {k.currency.split(",").map((c) => (
-                    <div>{symbol(c)}</div>
-                  ))}
-                </td>{" "}
-                <td>
-                  {k.currency.split(",").map((c) => (
-                    <div>
-                      {i18n.formatCurrency(123456789, {
-                        currency: c,
-                        form: "short"
-                      })}
-                    </div>
-                  ))}
-                </td>
-                <td>
-                  {k.currency.split(",").map((c) => (
-                    <div>
-                      {i18n.formatCurrency(123456789, {
-                        currency: c,
-                        form: "explicit"
-                      })}
-                    </div>
-                  ))}
-                </td>{" "}
-              </tr>
-            ))}
+            {allCountries.map((k, n) => {
+              let array = ["es"];
+              if (array.includes(k.languages[0]))
+                return (
+                  <tr>
+                    <td>
+                      <span className={"flag:" + k.iso} />
+                    </td>
+                    <td>{k.name}</td>
+                    <td>{k.iso}</td>
+                    <td>{k.continent}</td>
+                    <td>
+                      {k.languages[0]}-{k.iso}
+                    </td>
+                    {showData && (
+                      <td>
+                        <pre>{JSON.stringify(k, null, 2)}</pre>
+                      </td>
+                    )}
+                    <td>
+                      <table>
+                        {k.currency.split(",").map((c, i) => {
+                          let currency = new Currency(c);
+                          let money = new PreciseMoney(
+                            1234567890.123456789,
+                            currency
+                          );
+                          let formater = new IntlMoneyFormatter({
+                            locales: k.languages[0] + "-" + k.iso,
+                            style: "currency"
+                          });
+                          return (
+                            <tr>
+                              <td>
+                                <div>{c}</div>
+                              </td>
+                              {showData && (
+                                <td>
+                                  <pre>
+                                    {JSON.stringify(cc.code(c), null, 2)}
+                                  </pre>
+                                </td>
+                              )}
+                              <td>
+                                <div>{symbol(c)}</div>
+                              </td>
+                              <td>
+                                <div>{formater.format(money)}</div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </table>
+                    </td>
+                  </tr>
+                );
+            })}
           </tbody>
         </table>
       </center>
